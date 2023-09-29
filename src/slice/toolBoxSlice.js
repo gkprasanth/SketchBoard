@@ -24,7 +24,7 @@ const toolBoxSlice = createSlice({
             state[action.payload.item].color = action.payload.color
         },
         changeBrushSize : (state, action) => {
-            state[action.payload.item].brush = action.payload.brush
+            state[action.payload.item].size = action.payload.size
         }
     }
 })
