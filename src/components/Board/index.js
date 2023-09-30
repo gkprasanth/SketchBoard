@@ -1,11 +1,40 @@
+import { MENU_ITEMS } from '@/constants';
 import React, { useEffect, useLayoutEffect, useRef } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-
+import { menuItemClick, actionItemClick } from '@/slice/menuSlice'
 const Board = () => {
+    const dispatch = useDispatch()
+
     const canvasRef = useRef(null);
     const shouldDraw = useRef(false);
-    const activeMenuItem = useSelector((state) => state.menu.activeMenuItem);
+    const { activeMenuItem, actionMenuItem } = useSelector((state) => state.menu);
     const { color, size } = useSelector((state) => state.toolbox[activeMenuItem]);
+    const drawHistory = useRef([]);
+    const historyPointer = useRef(0)
+
+
+    useEffect(() => {
+        if (!canvasRef.current) return;
+        const canvas = canvasRef.current;
+
+        const context = canvas.getContext('2d');
+
+        if (actionMenuItem === MENU_ITEMS.DOWNLOAD) {
+            const URL = canvas.toDataURL()
+            const anchor = document.createElement('a')
+            anchor.href = URL
+            anchor.download = 'sketch.png'
+            anchor.click()
+            console.log(URL)
+        } else if (actionMenuItem === MENU_ITEMS.UNDO || actionMenuItem === MENU_ITEMS.REDO) {
+            if (historyPointer.current > 0 && actionMenuItem === MENU_ITEMS.UNDO) historyPointer.current -= 1
+            if (historyPointer.current < drawHistory.current.length - 1 && actionMenuItem === MENU_ITEMS.REDO) historyPointer.current += 1
+            const imageData = drawHistory.current[historyPointer.current]
+            context.putImageData(imageData, 0, 0)
+        }
+        dispatch(actionItemClick(null))
+
+    }, [actionMenuItem, activeMenuItem])
 
     useEffect(() => {
         if (!canvasRef.current) return;
@@ -20,7 +49,7 @@ const Board = () => {
         changeConfig();
     }, [color, size, activeMenuItem]); // Include activeMenuItem in the dependency array
 
-    
+
     //Before browser paint
     useLayoutEffect(() => {
         if (!canvasRef.current) return;
@@ -48,7 +77,10 @@ const Board = () => {
 
         const handleMouseUp = () => {
             shouldDraw.current = false;
-            context.closePath(); // Close the path on mouse up
+            // context.closePath(); // Close the path on mouse up
+            const imageData = context.getImageData(0, 0, canvas.width, canvas.height)
+            drawHistory.current.push(imageData)
+            historyPointer.current = drawHistory.current.length - 1
         };
 
         const handleMouseMove = (e) => {
